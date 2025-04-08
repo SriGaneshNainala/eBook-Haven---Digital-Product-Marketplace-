@@ -1,0 +1,18 @@
+@Entity
+@Table(name = "ebooks")
+public class Ebook {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String title;
+    private String description;
+    private Double price;
+    private String fileKey;  // S3 file key
+    
+    @ManyToOne
+    @JoinColumn(name = "seller_id")
+    private User seller;
+    
+    // Getters, setters, constructors
+}
