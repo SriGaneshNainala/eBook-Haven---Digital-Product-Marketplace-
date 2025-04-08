@@ -1,0 +1,26 @@
+@Service
+public class S3Service {
+    
+    @Autowired
+    private AmazonS3 amazonS3;
+    
+    @Value("${aws.s3.bucket}")
+    private String bucketName;
+    
+    public String uploadFile(MultipartFile file, String fileName) {
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(file.getSize());
+        
+        try {
+            amazonS3.putObject(bucketName, fileName, file.getInputStream(), metadata);
+            return amazonS3.getUrl(bucketName, fileName).toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Error uploading file to S3", e);
+        }
+    }
+    
+    public InputStream downloadFile(String fileKey) {
+        S3Object s3Object = amazonS3.getObject(bucketName, fileKey);
+        return s3Object.getObjectContent();
+    }
+}
