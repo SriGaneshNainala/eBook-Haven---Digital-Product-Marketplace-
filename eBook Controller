@@ -1,0 +1,43 @@
+@RestController
+@RequestMapping("/api/ebooks")
+public class EbookController {
+    
+    @Autowired
+    private EbookService ebookService;
+    
+    @Autowired
+    private S3Service s3Service;
+    
+    @PostMapping("/upload")
+    @PreAuthorize("hasAuthority('SELLER')")
+    public ResponseEntity<?> uploadEbook(@RequestParam("file") MultipartFile file,
+                                       @RequestParam("title") String title,
+                                       @RequestParam("description") String description,
+                                       @RequestParam("price") Double price,
+                                       Authentication authentication) {
+        String fileKey = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
+        String fileUrl = s3Service.uploadFile(file, fileKey);
+        
+        Ebook ebook = new Ebook();
+        ebook.setTitle(title);
+        ebook.setDescription(description);
+        ebook.setPrice(price);
+        ebook.setFileKey(fileKey);
+        ebook.setSeller((User) authentication.getPrincipal());
+        
+        Ebook savedEbook = ebookService.save(ebook);
+        return ResponseEntity.ok(savedEbook);
+    }
+    
+    @GetMapping("/{id}/download")
+    @PreAuthorize("hasAuthority('CUSTOMER')")
+    public ResponseEntity<?> downloadEbook(@PathVariable Long id) {
+        Ebook ebook = ebookService.findById(id);
+        InputStream inputStream = s3Service.downloadFile(ebook.getFileKey());
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + ebook.getTitle() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new InputStreamResource(inputStream));
+    }
+}
